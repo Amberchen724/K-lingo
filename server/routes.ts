@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import OpenAI from "openai";
 import type { SentenceAnalysis } from "@shared/schema";
+import { registerAudioRoutes } from "./replit_integrations/audio";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -13,6 +14,7 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  registerAudioRoutes(app);
 
   app.post("/api/analyze", async (req, res) => {
     try {

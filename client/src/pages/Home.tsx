@@ -137,19 +137,25 @@ export default function Home() {
     });
   };
 
-  const handleSpeak = (text: string) => {
-    if ("speechSynthesis" in window) {
-      // Cancel any ongoing speech
-      window.speechSynthesis.cancel();
-      
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "ko-KR"; // Set language to Korean
-      utterance.rate = 0.9;      // Slightly slower for better clarity
-      window.speechSynthesis.speak(utterance);
-    } else {
+  const handleSpeak = async (text: string) => {
+    try {
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!res.ok) throw new Error("Failed to fetch audio");
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.play();
+    } catch (error) {
+      console.error("TTS error:", error);
       toast({
-        title: "Not supported",
-        description: "Your browser does not support text-to-speech.",
+        title: "Audio error",
+        description: "Failed to play native speaker audio.",
         variant: "destructive"
       });
     }
