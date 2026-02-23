@@ -137,6 +137,24 @@ export default function Home() {
     });
   };
 
+  const handleSpeak = (text: string) => {
+    if ("speechSynthesis" in window) {
+      // Cancel any ongoing speech
+      window.speechSynthesis.cancel();
+      
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "ko-KR"; // Set language to Korean
+      utterance.rate = 0.9;      // Slightly slower for better clarity
+      window.speechSynthesis.speak(utterance);
+    } else {
+      toast({
+        title: "Not supported",
+        description: "Your browser does not support text-to-speech.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const renderAnalysis = (data: SentenceAnalysis) => (
     <Tabs defaultValue="pronunciation" className="w-full">
       <TabsList className="grid w-full grid-cols-3 bg-secondary/30 p-1 rounded-2xl h-auto">
@@ -157,17 +175,33 @@ export default function Home() {
       <div className="mt-6">
         <TabsContent value="pronunciation">
           <Card className="glass-panel border-0 rounded-3xl">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <CardTitle className="flex items-center text-primary">
                 <Volume2 className="w-5 h-5 mr-2" />
                 Listen & Repeat
               </CardTitle>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="rounded-xl text-primary hover:bg-primary/10"
+                onClick={() => handleSpeak(data.sentence)}
+                data-testid="button-speak"
+              >
+                <Volume2 className="w-4 h-4 mr-2" />
+                Play Audio
+              </Button>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="p-6 bg-primary/5 rounded-2xl">
-                <p className="text-2xl font-medium text-foreground leading-relaxed break-words" data-testid="text-korean-sentence">
+              <div 
+                className="p-6 bg-primary/5 rounded-2xl cursor-pointer hover:bg-primary/10 transition-colors group relative"
+                onClick={() => handleSpeak(data.sentence)}
+              >
+                <p className="text-2xl font-medium text-foreground leading-relaxed break-words pr-8" data-testid="text-korean-sentence">
                   {data.sentence}
                 </p>
+                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity text-primary">
+                  <Volume2 className="w-5 h-5" />
+                </div>
               </div>
               <div className="space-y-2">
                 <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Romanization</p>
