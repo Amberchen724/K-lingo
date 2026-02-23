@@ -88,12 +88,13 @@ Break down ALL words and particles. Identify 2-4 key grammar points. Use simple,
 
   app.post("/api/sentences", async (req, res) => {
     try {
-      const { korean, pronunciation, words, grammar, folderId } = req.body;
+      const { korean, translation, pronunciation, words, grammar, folderId } = req.body;
       if (!korean || !pronunciation) {
         return res.status(400).json({ error: "Missing required fields" });
       }
       const sentence = await storage.createSentence({
         korean,
+        translation,
         pronunciation,
         words,
         grammar,

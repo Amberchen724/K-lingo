@@ -41,6 +41,7 @@ interface Folder {
 interface SavedSentence {
   id: number;
   korean: string;
+  translation: string;
   pronunciation: string;
   words: WordEntry[];
   grammar: GrammarEntry[];
@@ -74,7 +75,7 @@ export default function Home() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: async (data: { korean: string; pronunciation: string; words: WordEntry[]; grammar: GrammarEntry[]; folderId: number }) => {
+    mutationFn: async (data: { korean: string; translation: string; pronunciation: string; words: WordEntry[]; grammar: GrammarEntry[]; folderId: number }) => {
       const res = await apiRequest("POST", "/api/sentences", data);
       return res.json();
     },
@@ -132,6 +133,7 @@ export default function Home() {
 
     saveMutation.mutate({
       korean: analysis.sentence,
+      translation: analysis.translation,
       pronunciation: analysis.pronunciation,
       words: analysis.words,
       grammar: analysis.grammar,
@@ -441,7 +443,8 @@ export default function Home() {
                         <div className="flex items-center justify-between">
                           <div className="flex-1 min-w-0" onClick={() => setViewingSentence(viewingSentence?.id === s.id ? null : s)}>
                             <p className="text-lg font-medium truncate">{s.korean}</p>
-                            <p className="text-sm text-muted-foreground italic truncate">{s.pronunciation}</p>
+                            <p className="text-sm text-muted-foreground truncate">{s.translation}</p>
+                            <p className="text-xs text-muted-foreground italic truncate">{s.pronunciation}</p>
                           </div>
                           <Button
                             variant="ghost"

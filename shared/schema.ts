@@ -12,6 +12,7 @@ export const folders = pgTable("folders", {
 export const sentences = pgTable("sentences", {
   id: serial("id").primaryKey(),
   korean: text("korean").notNull(),
+  translation: text("translation").notNull().default(""),
   pronunciation: text("pronunciation").notNull(),
   words: jsonb("words").notNull().$type<WordEntry[]>(),
   grammar: jsonb("grammar").notNull().$type<GrammarEntry[]>(),

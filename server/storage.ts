@@ -30,7 +30,10 @@ class DatabaseStorage implements IStorage {
   }
 
   async createSentence(sentence: InsertSentence): Promise<Sentence> {
-    const [created] = await db.insert(sentences).values(sentence).returning();
+    const [created] = await db.insert(sentences).values({
+      ...sentence,
+      translation: (sentence as any).translation || ""
+    }).returning();
     return created;
   }
 
