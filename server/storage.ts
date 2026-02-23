@@ -13,6 +13,7 @@ export interface IStorage {
   deleteSentence(id: number): Promise<void>;
   getAnalysisCache(hash: string): Promise<AnalysisCache | null>;
   setAnalysisCache(hash: string, sentence: string, modelVersion: string, result: SentenceAnalysis): Promise<void>;
+  updateSentenceFolderId(id: number, folderId: number): Promise<Sentence>;
 }
 
 class DatabaseStorage implements IStorage {
@@ -61,6 +62,11 @@ class DatabaseStorage implements IStorage {
 
   async setAnalysisCache(hash: string, sentence: string, modelVersion: string, result: SentenceAnalysis): Promise<void> {
     await db.insert(analysisCache).values({ hash, sentence, modelVersion, result }).onConflictDoNothing();
+  }
+
+  async updateSentenceFolderId(id: number, folderId: number): Promise<Sentence> {
+    const [updated] = await db.update(sentences).set({ folderId }).where(eq(sentences.id, id)).returning();
+    return updated;
   }
 }
 

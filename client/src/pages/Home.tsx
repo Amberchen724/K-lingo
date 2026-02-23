@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
-import { Sparkles, Volume2, BookOpen, Layers, Save, FolderPlus, Languages, Loader2, Trash2, FolderOpen, Edit2, Plus, X, Check, MessageSquare } from "lucide-react";
+import { Sparkles, Volume2, BookOpen, Layers, Save, FolderPlus, Languages, Loader2, Trash2, FolderOpen, Edit2, Plus, X, Check, MessageSquare, FolderInput } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
@@ -62,6 +62,8 @@ export default function Home() {
   const [editingFolder, setEditingFolder] = useState<number | null>(null);
   const [editFolderName, setEditFolderName] = useState("");
   const [editFolderEmoji, setEditFolderEmoji] = useState("");
+  const [movingId, setMovingId] = useState<number | null>(null);
+  const [moveTargetFolder, setMoveTargetFolder] = useState<string>("");
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [newFolderEmoji, setNewFolderEmoji] = useState("📁");
@@ -110,6 +112,25 @@ export default function Home() {
       }
       if (viewingSentence) setViewingSentence(null);
       toast({ title: "Deleted", description: "Sentence removed from folder" });
+    },
+  });
+
+  const moveMutation = useMutation({
+    mutationFn: async ({ id, folderId }: { id: number; folderId: number }) => {
+      const res = await apiRequest("PATCH", `/api/sentences/${id}`, { folderId });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/folders"] });
+      if (viewingFolder) {
+        queryClient.invalidateQueries({ queryKey: ["/api/folders", viewingFolder, "sentences"] });
+      }
+      setMovingId(null);
+      setMoveTargetFolder("");
+      toast({ title: "Moved!", description: "Sentence moved to new folder." });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to move sentence.", variant: "destructive" });
     },
   });
 
@@ -588,28 +609,83 @@ export default function Home() {
                   folderSentences.map(s => (
                     <Card
                       key={s.id}
-                      className={`border-0 rounded-2xl cursor-pointer transition-all hover:shadow-md ${
+                      className={`border-0 rounded-2xl transition-all hover:shadow-md ${
                         viewingSentence?.id === s.id ? "bg-primary/5 shadow-md" : "bg-white/60"
                       }`}
                       data-testid={`saved-sentence-${s.id}`}
                     >
-                      <CardContent className="p-4">
+                      <CardContent className="p-4 space-y-3">
                         <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0" onClick={() => setViewingSentence(viewingSentence?.id === s.id ? null : s)}>
+                          <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setViewingSentence(viewingSentence?.id === s.id ? null : s)}>
                             <p className="text-lg font-medium truncate">{s.korean}</p>
                             <p className="text-sm text-muted-foreground truncate">{s.translation}</p>
                             <p className="text-xs text-muted-foreground italic truncate">{s.pronunciation}</p>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-muted-foreground hover:text-destructive shrink-0 ml-2"
-                            onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(s.id); }}
-                            data-testid={`delete-sentence-${s.id}`}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          <div className="flex items-center shrink-0 ml-2 gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className={`text-muted-foreground hover:text-primary ${movingId === s.id ? "text-primary bg-primary/10" : ""}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (movingId === s.id) {
+                                  setMovingId(null);
+                                  setMoveTargetFolder("");
+                                } else {
+                                  setMovingId(s.id);
+                                  setMoveTargetFolder("");
+                                }
+                              }}
+                              data-testid={`move-sentence-${s.id}`}
+                              title="Move to another folder"
+                            >
+                              <FolderInput className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-muted-foreground hover:text-destructive"
+                              onClick={(e) => { e.stopPropagation(); deleteMutation.mutate(s.id); }}
+                              data-testid={`delete-sentence-${s.id}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
+
+                        {movingId === s.id && (
+                          <div className="flex items-center gap-2 pt-1 border-t border-border/40">
+                            <Select value={moveTargetFolder} onValueChange={setMoveTargetFolder}>
+                              <SelectTrigger className="flex-1 h-9 rounded-xl text-sm" data-testid={`select-move-folder-${s.id}`}>
+                                <SelectValue placeholder="Move to folder..." />
+                              </SelectTrigger>
+                              <SelectContent className="rounded-xl">
+                                {folders.filter(f => f.id !== viewingFolder).map(f => (
+                                  <SelectItem key={f.id} value={f.id.toString()} className="rounded-lg cursor-pointer">
+                                    {f.emoji} {f.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Button
+                              size="sm"
+                              className="h-9 rounded-xl px-3"
+                              disabled={!moveTargetFolder || moveMutation.isPending}
+                              onClick={() => moveMutation.mutate({ id: s.id, folderId: parseInt(moveTargetFolder) })}
+                              data-testid={`confirm-move-${s.id}`}
+                            >
+                              {moveMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-9 rounded-xl px-3"
+                              onClick={() => { setMovingId(null); setMoveTargetFolder(""); }}
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   ))

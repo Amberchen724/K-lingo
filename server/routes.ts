@@ -163,6 +163,21 @@ Break down ALL words and particles. Identify 2-4 key grammar points. Use simple,
     }
   });
 
+  app.patch("/api/sentences/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { folderId } = req.body;
+      if (!folderId || typeof folderId !== "number") {
+        return res.status(400).json({ error: "folderId is required" });
+      }
+      const updated = await storage.updateSentenceFolderId(id, folderId);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error moving sentence:", error);
+      res.status(500).json({ error: "Failed to move sentence" });
+    }
+  });
+
   app.delete("/api/sentences/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
