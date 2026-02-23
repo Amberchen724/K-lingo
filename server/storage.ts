@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { folders, sentences, type Folder, type InsertFolder, type Sentence, type InsertSentence } from "@shared/schema";
+import { folders, sentences, analysisCache, type Folder, type InsertFolder, type Sentence, type InsertSentence, type AnalysisCache, type SentenceAnalysis } from "@shared/schema";
 import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
@@ -11,6 +11,8 @@ export interface IStorage {
   getAllSentences(): Promise<Sentence[]>;
   createSentence(sentence: InsertSentence): Promise<Sentence>;
   deleteSentence(id: number): Promise<void>;
+  getAnalysisCache(hash: string): Promise<AnalysisCache | null>;
+  setAnalysisCache(hash: string, sentence: string, modelVersion: string, result: SentenceAnalysis): Promise<void>;
 }
 
 class DatabaseStorage implements IStorage {
@@ -50,6 +52,15 @@ class DatabaseStorage implements IStorage {
 
   async deleteSentence(id: number): Promise<void> {
     await db.delete(sentences).where(eq(sentences.id, id));
+  }
+
+  async getAnalysisCache(hash: string): Promise<AnalysisCache | null> {
+    const [row] = await db.select().from(analysisCache).where(eq(analysisCache.hash, hash)).limit(1);
+    return row ?? null;
+  }
+
+  async setAnalysisCache(hash: string, sentence: string, modelVersion: string, result: SentenceAnalysis): Promise<void> {
+    await db.insert(analysisCache).values({ hash, sentence, modelVersion, result }).onConflictDoNothing();
   }
 }
 

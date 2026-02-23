@@ -1,10 +1,21 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { createHash } from "crypto";
 import { storage } from "./storage";
 import OpenAI from "openai";
 import type { SentenceAnalysis } from "@shared/schema";
 import { registerAudioRoutes, ensureCompatibleFormat, speechToText } from "./replit_integrations/audio";
 import { registerChatRoutes } from "./replit_integrations/chat";
+
+const MODEL_VERSION = "gpt-4o-mini-v1";
+
+function normalizeSentence(raw: string): string {
+  return raw.trim().replace(/\s+/g, " ");
+}
+
+function hashSentence(normalized: string): string {
+  return createHash("sha256").update(normalized).digest("hex");
+}
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -23,6 +34,14 @@ export async function registerRoutes(
       const { sentence } = req.body;
       if (!sentence || typeof sentence !== "string" || !sentence.trim()) {
         return res.status(400).json({ error: "Please provide a Korean sentence" });
+      }
+
+      const normalized = normalizeSentence(sentence);
+      const hash = hashSentence(normalized);
+
+      const cached = await storage.getAnalysisCache(hash);
+      if (cached) {
+        return res.json(cached.result);
       }
 
       const response = await openai.chat.completions.create({
@@ -60,6 +79,9 @@ Break down ALL words and particles. Identify 2-4 key grammar points. Use simple,
 
       const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
       const analysis: SentenceAnalysis = JSON.parse(cleaned);
+
+      await storage.setAnalysisCache(hash, normalized, MODEL_VERSION, analysis);
+
       res.json(analysis);
     } catch (error: any) {
       console.error("Analysis error:", error);

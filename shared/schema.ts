@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, serial, text, timestamp, integer, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, integer, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -17,6 +17,15 @@ export const sentences = pgTable("sentences", {
   words: jsonb("words").notNull().$type<WordEntry[]>(),
   grammar: jsonb("grammar").notNull().$type<GrammarEntry[]>(),
   folderId: integer("folder_id").references(() => folders.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
+export const analysisCache = pgTable("analysis_cache", {
+  id: serial("id").primaryKey(),
+  hash: text("hash").notNull().unique(),
+  sentence: text("sentence").notNull(),
+  modelVersion: text("model_version").notNull(),
+  result: jsonb("result").notNull().$type<SentenceAnalysis>(),
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
@@ -64,3 +73,4 @@ export type Sentence = typeof sentences.$inferSelect;
 export type InsertSentence = z.infer<typeof insertSentenceSchema>;
 export type Conversation = typeof conversations.$inferSelect;
 export type Message = typeof messages.$inferSelect;
+export type AnalysisCache = typeof analysisCache.$inferSelect;

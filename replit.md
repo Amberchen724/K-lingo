@@ -33,8 +33,15 @@ Preferred communication style: Simple, everyday language.
 - **Build**: Custom build script (`script/build.ts`) using esbuild for server bundle + Vite for client
 
 ### API Routes (server/routes.ts)
-- `POST /api/analyze` — Sends a Korean sentence to OpenAI (gpt-4o-mini) and returns structured analysis (pronunciation, word breakdown, grammar points)
+- `POST /api/analyze` — Checks `analysis_cache` table first (by SHA-256 hash of normalized sentence); returns cached result if found, otherwise calls OpenAI (gpt-4o-mini), stores result, then returns it
+- `POST /api/pronunciation-score` — Accepts base64 audio + sentence, transcribes via Whisper, scores pronunciation via GPT
 - Folder and sentence CRUD operations via the storage layer
+
+### Analysis Caching
+- Sentence is normalized (trim + collapse whitespace) before hashing
+- Hash: SHA-256 hex of normalized sentence, used as cache key
+- `MODEL_VERSION = "gpt-4o-mini-v1"` — bump this constant in `server/routes.ts` to invalidate cache when the prompt changes
+- Cache stored in `analysis_cache` table (PostgreSQL/JSONB)
 
 ### Database
 - **Database**: PostgreSQL (required via `DATABASE_URL` environment variable)
@@ -43,6 +50,7 @@ Preferred communication style: Simple, everyday language.
 - **Schema** (`shared/schema.ts`):
   - `folders` — id, name, emoji (for organizing saved sentences)
   - `sentences` — id, korean text, pronunciation, words (JSONB), grammar (JSONB), folderId (FK), createdAt
+  - `analysis_cache` — id, hash (unique), sentence, model_version, result (JSONB), createdAt
   - `conversations` — id, title, createdAt (for chat feature)
   - `messages` — id, conversationId (FK), role, content, createdAt
 - **Migrations**: Managed via `drizzle-kit push` (schema push approach, not migration files)
