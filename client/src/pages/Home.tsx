@@ -8,9 +8,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
-import { Sparkles, Volume2, BookOpen, Layers, Save, FolderPlus, Languages, Loader2, Trash2, FolderOpen, Edit2, Plus, X, Check } from "lucide-react";
+import { Sparkles, Volume2, BookOpen, Layers, Save, FolderPlus, Languages, Loader2, Trash2, FolderOpen, Edit2, Plus, X, Check, MessageSquare } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest } from "@/lib/queryClient";
+import { Link } from "wouter";
 
 interface WordEntry {
   korean: string;
@@ -333,7 +334,15 @@ export default function Home() {
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-4xl mx-auto space-y-8">
 
-        <header className="text-center space-y-4 py-8">
+        <header className="text-center space-y-4 py-8 relative">
+          <div className="absolute top-8 right-0">
+            <Link href="/chat" data-testid="link-ai-assistant">
+              <Button variant="outline" size="sm" className="gap-2 rounded-xl border-primary/30 text-primary hover:bg-primary/10">
+                <MessageSquare size={15} />
+                AI Assistant
+              </Button>
+            </Link>
+          </div>
           <div className="inline-flex items-center justify-center p-3 bg-primary/10 rounded-2xl mb-2 text-primary">
             <Languages size={40} strokeWidth={1.5} />
           </div>

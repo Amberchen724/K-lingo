@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import OpenAI from "openai";
 import type { SentenceAnalysis } from "@shared/schema";
 import { registerAudioRoutes } from "./replit_integrations/audio";
+import { registerChatRoutes } from "./replit_integrations/chat";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -15,6 +16,7 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   registerAudioRoutes(app);
+  registerChatRoutes(app);
 
   app.post("/api/analyze", async (req, res) => {
     try {
