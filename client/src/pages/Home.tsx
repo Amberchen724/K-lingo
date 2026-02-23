@@ -12,6 +12,7 @@ import { Sparkles, Volume2, BookOpen, Layers, Save, FolderPlus, Languages, Loade
 import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
+import PronunciationRecorder from "@/components/PronunciationRecorder";
 
 interface WordEntry {
   korean: string;
@@ -266,6 +267,9 @@ export default function Home() {
                 <p className="text-xl text-foreground/80 italic" data-testid="text-romanization">
                   "{data.pronunciation}"
                 </p>
+              </div>
+              <div className="border-t border-border/40 pt-5">
+                <PronunciationRecorder sentence={data.sentence} />
               </div>
             </CardContent>
           </Card>

@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import OpenAI from "openai";
 import type { SentenceAnalysis } from "@shared/schema";
-import { registerAudioRoutes } from "./replit_integrations/audio";
+import { registerAudioRoutes, ensureCompatibleFormat, speechToText } from "./replit_integrations/audio";
 import { registerChatRoutes } from "./replit_integrations/chat";
 
 const openai = new OpenAI({
@@ -149,6 +149,56 @@ Break down ALL words and particles. Identify 2-4 key grammar points. Use simple,
     } catch (error) {
       console.error("Error deleting sentence:", error);
       res.status(500).json({ error: "Failed to delete sentence" });
+    }
+  });
+
+  app.post("/api/pronunciation-score", async (req, res) => {
+    try {
+      const { audio, sentence } = req.body;
+      if (!audio || !sentence) {
+        return res.status(400).json({ error: "audio and sentence are required" });
+      }
+
+      const audioBuffer = Buffer.from(audio, "base64");
+      const { buffer: compatBuffer, format } = await ensureCompatibleFormat(audioBuffer);
+      const transcribed = await speechToText(compatBuffer, format);
+
+      const scoringResponse = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content: `You are a Korean pronunciation coach. You are given the original Korean sentence and the learner's transcribed speech. Compare them and return a JSON object with exactly this structure:
+{
+  "score": <integer 0-100 representing overall pronunciation accuracy>,
+  "transcribed": "<what the learner actually said>",
+  "feedback": "<1-2 sentence overall feedback in simple English>",
+  "wordScores": [
+    { "korean": "<word from original>", "correct": <true|false>, "note": "<brief note, e.g. 'good' or 'try pronouncing the ㅂ softer'>" }
+  ]
+}
+Be encouraging but honest. Return ONLY valid JSON, no markdown.`
+          },
+          {
+            role: "user",
+            content: `Original sentence: ${sentence}\nLearner's speech: ${transcribed}`
+          }
+        ],
+        temperature: 0.3,
+        max_tokens: 800,
+      });
+
+      const content = scoringResponse.choices[0]?.message?.content;
+      if (!content) {
+        return res.status(500).json({ error: "No response from AI" });
+      }
+
+      const cleaned = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      const result = JSON.parse(cleaned);
+      res.json(result);
+    } catch (error: any) {
+      console.error("Pronunciation scoring error:", error);
+      res.status(500).json({ error: "Failed to score pronunciation. Please try again." });
     }
   });
 
