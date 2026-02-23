@@ -31,6 +31,7 @@ export async function registerRoutes(
             content: `You are a Korean language expert. Analyze the given Korean sentence and return a JSON object with exactly this structure:
 {
   "sentence": "<the original Korean sentence>",
+  "translation": "<natural English translation>",
   "pronunciation": "<full romanization of the sentence>",
   "words": [
     { "korean": "<Korean word or morpheme>", "meaning": "<English meaning>", "type": "<part of speech: Noun, Verb, Adjective, Adverb, Particle, Greeting, Pronoun, Conjunction, etc.>" }

@@ -25,6 +25,7 @@ interface GrammarEntry {
 
 interface SentenceAnalysis {
   sentence: string;
+  translation: string;
   pronunciation: string;
   words: WordEntry[];
   grammar: GrammarEntry[];
@@ -204,6 +205,9 @@ export default function Home() {
               >
                 <p className="text-2xl font-medium text-foreground leading-relaxed break-words pr-8" data-testid="text-korean-sentence">
                   {data.sentence}
+                </p>
+                <p className="text-lg text-muted-foreground mt-2" data-testid="text-translation">
+                  {data.translation}
                 </p>
                 <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity text-primary">
                   <Volume2 className="w-5 h-5" />

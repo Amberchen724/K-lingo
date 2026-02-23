@@ -47,6 +47,7 @@ export interface GrammarEntry {
 
 export interface SentenceAnalysis {
   sentence: string;
+  translation: string;
   pronunciation: string;
   words: WordEntry[];
   grammar: GrammarEntry[];
