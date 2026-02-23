@@ -13,6 +13,7 @@ import { apiRequest } from "@/lib/queryClient";
 
 interface WordEntry {
   korean: string;
+  pronunciation: string;
   meaning: string;
   type: string;
 }
@@ -236,7 +237,10 @@ export default function Home() {
                 {data.words.map((word, idx) => (
                   <div key={idx} className="flex items-center justify-between p-4 bg-white/50 rounded-2xl border border-white/20 hover:bg-white/80 transition-colors" data-testid={`word-entry-${idx}`}>
                     <div>
-                      <p className="text-lg font-bold text-foreground">{word.korean}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-lg font-bold text-foreground">{word.korean}</p>
+                        <p className="text-sm text-muted-foreground italic">({word.pronunciation})</p>
+                      </div>
                       <p className="text-muted-foreground">{word.meaning}</p>
                     </div>
                     <Badge variant="secondary" className="bg-secondary/50 text-secondary-foreground rounded-lg px-3 py-1">

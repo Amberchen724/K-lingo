@@ -34,7 +34,7 @@ export async function registerRoutes(
   "translation": "<natural English translation>",
   "pronunciation": "<full romanization of the sentence>",
   "words": [
-    { "korean": "<Korean word or morpheme>", "meaning": "<English meaning>", "type": "<part of speech: Noun, Verb, Adjective, Adverb, Particle, Greeting, Pronoun, Conjunction, etc.>" }
+    { "korean": "<Korean word or morpheme>", "pronunciation": "<romanization>", "meaning": "<English meaning>", "type": "<part of speech: Noun, Verb, Adjective, Adverb, Particle, Greeting, Pronoun, Conjunction, etc.>" }
   ],
   "grammar": [
     { "point": "<grammar pattern>", "explanation": "<clear explanation for beginners>", "example": "<example from the sentence>" }

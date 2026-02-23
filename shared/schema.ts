@@ -35,6 +35,7 @@ export const messages = pgTable("messages", {
 
 export interface WordEntry {
   korean: string;
+  pronunciation: string;
   meaning: string;
   type: string;
 }
