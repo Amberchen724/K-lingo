@@ -1,38 +1,42 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { db } from "./db";
+import { folders, sentences, type Folder, type InsertFolder, type Sentence, type InsertSentence } from "@shared/schema";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getFolders(): Promise<Folder[]>;
+  createFolder(folder: InsertFolder): Promise<Folder>;
+  getSentencesByFolder(folderId: number): Promise<Sentence[]>;
+  getAllSentences(): Promise<Sentence[]>;
+  createSentence(sentence: InsertSentence): Promise<Sentence>;
+  deleteSentence(id: number): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
+class DatabaseStorage implements IStorage {
+  async getFolders(): Promise<Folder[]> {
+    return db.select().from(folders);
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async createFolder(folder: InsertFolder): Promise<Folder> {
+    const [created] = await db.insert(folders).values(folder).returning();
+    return created;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async getSentencesByFolder(folderId: number): Promise<Sentence[]> {
+    return db.select().from(sentences).where(eq(sentences.folderId, folderId)).orderBy(desc(sentences.createdAt));
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async getAllSentences(): Promise<Sentence[]> {
+    return db.select().from(sentences).orderBy(desc(sentences.createdAt));
+  }
+
+  async createSentence(sentence: InsertSentence): Promise<Sentence> {
+    const [created] = await db.insert(sentences).values(sentence).returning();
+    return created;
+  }
+
+  async deleteSentence(id: number): Promise<void> {
+    await db.delete(sentences).where(eq(sentences.id, id));
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
