@@ -1,7 +1,6 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Mic, MicOff, Loader2, RotateCcw, CheckCircle2, XCircle } from "lucide-react";
+import { Mic, MicOff, Loader2, RotateCcw, CheckCircle2, XCircle, Play, Square } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface WordScore {
@@ -28,14 +27,21 @@ export default function PronunciationRecorder({ sentence }: PronunciationRecorde
   const [result, setResult] = useState<PronunciationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [seconds, setSeconds] = useState(0);
+  const [recordingUrl, setRecordingUrl] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const startRecording = async () => {
     setError(null);
     setResult(null);
+    if (recordingUrl) {
+      URL.revokeObjectURL(recordingUrl);
+      setRecordingUrl(null);
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
@@ -49,6 +55,8 @@ export default function PronunciationRecorder({ sentence }: PronunciationRecorde
       mediaRecorder.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
         const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        const url = URL.createObjectURL(blob);
+        setRecordingUrl(url);
         await scoreRecording(blob);
       };
 
@@ -90,11 +98,32 @@ export default function PronunciationRecorder({ sentence }: PronunciationRecorde
     }
   };
 
+  const playRecording = () => {
+    if (!recordingUrl) return;
+    if (isPlaying && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setIsPlaying(false);
+      return;
+    }
+    const audio = new Audio(recordingUrl);
+    audioRef.current = audio;
+    audio.play();
+    setIsPlaying(true);
+    audio.onended = () => setIsPlaying(false);
+    audio.onerror = () => setIsPlaying(false);
+  };
+
   const reset = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
     setState("idle");
     setResult(null);
     setError(null);
     setSeconds(0);
+    setIsPlaying(false);
   };
 
   const scoreColor = (score: number) => {
@@ -213,16 +242,37 @@ export default function PronunciationRecorder({ sentence }: PronunciationRecorde
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">out of 100</p>
               </div>
-              <div className="space-y-1">
+              <div className="space-y-1 flex-1 min-w-0">
                 <p className="text-sm font-semibold text-foreground">You said:</p>
                 <p className="text-sm text-muted-foreground italic" data-testid="text-transcribed">&ldquo;{result.transcribed}&rdquo;</p>
                 <p className="text-sm text-foreground/80 leading-relaxed mt-2" data-testid="text-pronunciation-feedback">{result.feedback}</p>
               </div>
             </div>
 
+            {recordingUrl && (
+              <Button
+                onClick={playRecording}
+                variant="outline"
+                className="w-full rounded-2xl py-5 gap-2 border-primary/20 text-primary hover:bg-primary/5"
+                data-testid="button-play-recording"
+              >
+                {isPlaying ? (
+                  <>
+                    <Square className="w-4 h-4 fill-current" />
+                    Stop Playback
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4 fill-current" />
+                    Listen to my recording
+                  </>
+                )}
+              </Button>
+            )}
+
             {result.wordScores && result.wordScores.length > 0 && (
               <div className="space-y-2">
-                <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider text-xs">Word by Word</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Word by Word</p>
                 <div className="flex flex-wrap gap-2">
                   {result.wordScores.map((ws, idx) => (
                     <div
