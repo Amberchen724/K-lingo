@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, Volume2, BookOpen, Layers, Save, FolderPlus, Languages, Loader2, Trash2, FolderOpen } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Sparkles, Volume2, BookOpen, Layers, Save, FolderPlus, Languages, Loader2, Trash2, FolderOpen, Edit2, Plus, X, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -56,6 +57,12 @@ export default function Home() {
   const [selectedFolder, setSelectedFolder] = useState<string>("");
   const [viewingFolder, setViewingFolder] = useState<number | null>(null);
   const [viewingSentence, setViewingSentence] = useState<SavedSentence | null>(null);
+  const [editingFolder, setEditingFolder] = useState<number | null>(null);
+  const [editFolderName, setEditFolderName] = useState("");
+  const [editFolderEmoji, setEditFolderEmoji] = useState("");
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [newFolderEmoji, setNewFolderEmoji] = useState("📁");
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -101,6 +108,43 @@ export default function Home() {
       }
       if (viewingSentence) setViewingSentence(null);
       toast({ title: "Deleted", description: "Sentence removed from folder" });
+    },
+  });
+
+  const createFolderMutation = useMutation({
+    mutationFn: async (data: { name: string; emoji: string }) => {
+      const res = await apiRequest("POST", "/api/folders", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/folders"] });
+      setIsCreatingFolder(false);
+      setNewFolderName("");
+      setNewFolderEmoji("📁");
+      toast({ title: "Folder Created", description: "Your new theme is ready!" });
+    },
+  });
+
+  const updateFolderMutation = useMutation({
+    mutationFn: async ({ id, name, emoji }: { id: number; name: string; emoji: string }) => {
+      const res = await apiRequest("PATCH", `/api/folders/${id}`, { name, emoji });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/folders"] });
+      setEditingFolder(null);
+      toast({ title: "Folder Updated", description: "Changes saved successfully." });
+    },
+  });
+
+  const deleteFolderMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await apiRequest("DELETE", `/api/folders/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/folders"] });
+      setViewingFolder(null);
+      toast({ title: "Folder Deleted", description: "The folder and its sentences were removed." });
     },
   });
 
@@ -397,23 +441,120 @@ export default function Home() {
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
             {folders.map(folder => (
-              <button
-                key={folder.id}
-                onClick={() => {
-                  setViewingFolder(viewingFolder === folder.id ? null : folder.id);
-                  setViewingSentence(null);
-                }}
-                className={`p-4 rounded-2xl text-center transition-all hover:scale-[1.02] ${
-                  viewingFolder === folder.id
-                    ? "bg-primary text-primary-foreground shadow-md"
-                    : "bg-white/60 hover:bg-white/80 border border-white/30"
-                }`}
-                data-testid={`folder-${folder.id}`}
-              >
-                <span className="text-2xl block mb-1">{folder.emoji}</span>
-                <span className="text-sm font-semibold">{folder.name}</span>
-              </button>
+              <div key={folder.id} className="relative group">
+                {editingFolder === folder.id ? (
+                  <div className="p-3 bg-white border border-primary/30 rounded-2xl space-y-2 z-10 shadow-lg">
+                    <div className="flex gap-2">
+                      <Input 
+                        value={editFolderEmoji} 
+                        onChange={(e) => setEditFolderEmoji(e.target.value)}
+                        className="w-12 text-center p-0 h-9 rounded-lg"
+                      />
+                      <Input 
+                        value={editFolderName} 
+                        onChange={(e) => setEditFolderName(e.target.value)}
+                        className="h-9 rounded-lg"
+                      />
+                    </div>
+                    <div className="flex gap-1 justify-end">
+                      <Button size="sm" variant="ghost" onClick={() => setEditingFolder(null)} className="h-8 w-8 p-0">
+                        <X className="w-4 h-4" />
+                      </Button>
+                      <Button size="sm" onClick={() => updateFolderMutation.mutate({ id: folder.id, name: editFolderName, emoji: editFolderEmoji })} className="h-8 w-8 p-0">
+                        <Check className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => {
+                        setViewingFolder(viewingFolder === folder.id ? null : folder.id);
+                        setViewingSentence(null);
+                      }}
+                      className={`w-full p-4 rounded-2xl text-center transition-all hover:scale-[1.02] ${
+                        viewingFolder === folder.id
+                          ? "bg-primary text-primary-foreground shadow-md"
+                          : "bg-white/60 hover:bg-white/80 border border-white/30"
+                      }`}
+                      data-testid={`folder-${folder.id}`}
+                    >
+                      <span className="text-2xl block mb-1">{folder.emoji}</span>
+                      <span className="text-sm font-semibold">{folder.name}</span>
+                    </button>
+                    <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7 bg-white/90 shadow-sm rounded-lg hover:text-primary"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingFolder(folder.id);
+                          setEditFolderName(folder.name);
+                          setEditFolderEmoji(folder.emoji);
+                        }}
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7 bg-white/90 shadow-sm rounded-lg hover:text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm("Delete this folder and all sentences inside?")) {
+                            deleteFolderMutation.mutate(folder.id);
+                          }
+                        }}
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
             ))}
+            
+            {isCreatingFolder ? (
+              <div className="p-3 bg-white border border-primary/30 rounded-2xl space-y-2 shadow-lg">
+                <div className="flex gap-2">
+                  <Input 
+                    value={newFolderEmoji} 
+                    onChange={(e) => setNewFolderEmoji(e.target.value)}
+                    className="w-12 text-center p-0 h-9 rounded-lg"
+                    placeholder="📁"
+                  />
+                  <Input 
+                    value={newFolderName} 
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    className="h-9 rounded-lg"
+                    placeholder="Theme..."
+                    autoFocus
+                  />
+                </div>
+                <div className="flex gap-1 justify-end">
+                  <Button size="sm" variant="ghost" onClick={() => setIsCreatingFolder(false)} className="h-8 w-8 p-0">
+                    <X className="w-4 h-4" />
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    disabled={!newFolderName.trim()}
+                    onClick={() => createFolderMutation.mutate({ name: newFolderName, emoji: newFolderEmoji })} 
+                    className="h-8 w-8 p-0"
+                  >
+                    <Check className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsCreatingFolder(true)}
+                className="p-4 rounded-2xl text-center border-2 border-dashed border-primary/20 hover:border-primary/40 hover:bg-primary/5 transition-all group"
+              >
+                <Plus className="w-6 h-6 mx-auto mb-1 text-primary/40 group-hover:text-primary/60" />
+                <span className="text-sm font-semibold text-primary/40 group-hover:text-primary/60">New Folder</span>
+              </button>
+            )}
           </div>
 
           <AnimatePresence>

@@ -75,6 +75,38 @@ Break down ALL words and particles. Identify 2-4 key grammar points. Use simple,
     }
   });
 
+  app.post("/api/folders", async (req, res) => {
+    try {
+      const { name, emoji } = req.body;
+      if (!name) return res.status(400).json({ error: "Name is required" });
+      const folder = await storage.createFolder({ name, emoji: emoji || "📁" });
+      res.status(201).json(folder);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create folder" });
+    }
+  });
+
+  app.patch("/api/folders/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { name, emoji } = req.body;
+      const folder = await storage.updateFolder(id, { name, emoji });
+      res.json(folder);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update folder" });
+    }
+  });
+
+  app.delete("/api/folders/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteFolder(id);
+      res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: "Failed to delete folder" });
+    }
+  });
+
   app.get("/api/folders/:id/sentences", async (req, res) => {
     try {
       const folderId = parseInt(req.params.id);
