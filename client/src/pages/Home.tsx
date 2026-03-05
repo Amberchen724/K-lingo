@@ -381,8 +381,8 @@ export default function Home() {
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-4xl mx-auto space-y-8">
 
-        <header className="text-center space-y-4 py-8 relative">
-          <div className="absolute top-8 right-0 flex gap-2">
+        <header className="text-center space-y-4 py-8">
+          <div className="flex justify-end gap-2 mb-2">
             <Link href="/review" data-testid="link-review">
               <Button variant="outline" size="sm" className="gap-2 rounded-xl border-purple-300 text-purple-600 hover:bg-purple-50">
                 <GraduationCap size={15} />
