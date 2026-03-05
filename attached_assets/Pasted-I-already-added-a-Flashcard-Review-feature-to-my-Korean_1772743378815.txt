@@ -1,0 +1,45 @@
+I already added a Flashcard Review feature to my Korean sentence analyzer app. Now I want to enhance review cards with pronunciation *playback only* (NO pronunciation scoring during review).
+
+GOAL
+- In review mode, users should be able to listen to native Korean pronunciation for the sentence.
+- This must NOT trigger any OpenAI / Whisper / speech-to-text API calls during review.
+- Only reuse previously generated / saved audio.
+
+CURRENT ASSUMPTIONS
+- Each sentence has been analyzed and saved in the database.
+- During sentence analysis time, we either already generate TTS audio OR we can generate it once and store it.
+
+REQUIREMENTS
+
+1) Database changes (if needed)
+- Ensure the sentence record stores:
+  - audio_url (or audio_path)
+  - OPTIONAL: audio_url_slow (or a speed parameter we can apply client-side)
+- If audio does not exist for an already-saved sentence, generate it ONCE (either via existing TTS pipeline) and store it, but do NOT regenerate on every review.
+
+2) Review UI changes
+On the review card (after reveal / or on the back side), add:
+- Button: "Play" (plays normal speed audio)
+- Button: "Slow" (plays slower speed audio if available)
+- Optional: Auto-play audio when the back side is revealed (add a setting toggle)
+
+3) No scoring in review
+- Do NOT add record/compare/scoring inside the review flow.
+- Do not call speech-to-text or OpenAI inside review endpoints.
+
+4) API + caching logic
+- During review page load, fetch flashcards + sentence data including audio_url in ONE request if possible.
+- If a sentence has no audio_url, create a server-side job/function that:
+  - Generates audio once
+  - Saves audio_url to the sentence record
+  - Returns the updated audio_url
+- Add a guard so it never re-generates if audio_url already exists.
+
+5) Implementation details
+- Use an HTML <audio> element (or equivalent in my stack) to play audio from audio_url.
+- Handle errors (missing audio_url, failed audio fetch) with a fallback message: "Audio not available yet."
+
+DELIVERABLES
+- Update the backend schema and endpoints as needed
+- Update the Review page UI to include playback buttons
+- Ensure review mode does not trigger any new API calls for speech recognition or pronunciation scoring
