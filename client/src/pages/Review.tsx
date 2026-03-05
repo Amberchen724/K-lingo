@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
 import type { Flashcard } from "@shared/schema";
+import PronunciationRecorder from "@/components/PronunciationRecorder";
 
 type CardRating = "again" | "good" | "easy";
 type CardFilter = "all" | "sentence" | "vocab" | "grammar";
@@ -87,6 +88,11 @@ export default function Review() {
     if (type === "sentence") return "bg-blue-100 text-blue-700";
     if (type === "vocab") return "bg-emerald-100 text-emerald-700";
     return "bg-purple-100 text-purple-700";
+  };
+
+  const getKoreanText = (c: Flashcard) => {
+    if (c.cardType === "sentence") return c.backText;
+    return c.frontText;
   };
 
   const tabs: { key: CardFilter; label: string; icon: React.ReactNode; activeClass: string; count: number }[] = [
@@ -215,6 +221,14 @@ export default function Review() {
                         <p className="text-2xl font-semibold leading-relaxed break-words" data-testid="text-card-back">
                           {card.backText}
                         </p>
+                        <div
+                          className="w-full border-t border-border/40 mt-6 pt-4"
+                          onClick={(e) => e.stopPropagation()}
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onTouchStart={(e) => e.stopPropagation()}
+                        >
+                          <PronunciationRecorder key={card.id} sentence={getKoreanText(card)} />
+                        </div>
                       </>
                     )}
                   </CardContent>
