@@ -3,12 +3,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { RotateCcw, Check, Zap, ArrowLeft, BookOpen, Languages, Layers, ChevronRight } from "lucide-react";
+import { RotateCcw, Check, Zap, ArrowLeft, BookOpen, Languages, Layers, ChevronRight, Volume2, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
 import type { Flashcard } from "@shared/schema";
-import PronunciationRecorder from "@/components/PronunciationRecorder";
 
 type CardRating = "again" | "good" | "easy";
 type CardFilter = "all" | "sentence" | "vocab" | "grammar";
@@ -17,9 +16,12 @@ export default function Review() {
   const [revealed, setRevealed] = useState(false);
   const [reviewedIds, setReviewedIds] = useState<Set<number>>(new Set());
   const [filter, setFilter] = useState<CardFilter>("all");
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const prevDueIdsRef = useRef<string>("");
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const activeSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
   const { data: dueCards = [], isLoading } = useQuery<Flashcard[]>({
     queryKey: ["/api/flashcards/due"],
@@ -93,6 +95,44 @@ export default function Review() {
   const getKoreanText = (c: Flashcard) => {
     if (c.cardType === "sentence") return c.backText;
     return c.frontText;
+  };
+
+  const handleSpeak = async (text: string) => {
+    if (isSpeaking) {
+      if (activeSourceRef.current) {
+        activeSourceRef.current.stop();
+        activeSourceRef.current = null;
+      }
+      setIsSpeaking(false);
+      return;
+    }
+    try {
+      setIsSpeaking(true);
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      const ctx = audioContextRef.current;
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      if (!res.ok) throw new Error("TTS failed");
+      const arrayBuffer = await res.arrayBuffer();
+      const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+      const source = ctx.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(ctx.destination);
+      activeSourceRef.current = source;
+      source.onended = () => {
+        setIsSpeaking(false);
+        activeSourceRef.current = null;
+      };
+      source.start(0);
+    } catch {
+      setIsSpeaking(false);
+      toast({ title: "Error", description: "Failed to play audio.", variant: "destructive" });
+    }
   };
 
   const tabs: { key: CardFilter; label: string; icon: React.ReactNode; activeClass: string; count: number }[] = [
@@ -221,13 +261,21 @@ export default function Review() {
                         <p className="text-2xl font-semibold leading-relaxed break-words" data-testid="text-card-back">
                           {card.backText}
                         </p>
-                        <div
-                          className="w-full border-t border-border/40 mt-6 pt-4"
-                          onClick={(e) => e.stopPropagation()}
-                          onPointerDown={(e) => e.stopPropagation()}
-                          onTouchStart={(e) => e.stopPropagation()}
-                        >
-                          <PronunciationRecorder key={card.id} sentence={getKoreanText(card)} />
+                        <div className="mt-6 pt-4 border-t border-border/40">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="rounded-xl gap-2 text-primary hover:bg-primary/10 w-full"
+                            onClick={(e) => { e.stopPropagation(); handleSpeak(getKoreanText(card)); }}
+                            data-testid="button-listen"
+                          >
+                            {isSpeaking ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Volume2 className="w-4 h-4" />
+                            )}
+                            {isSpeaking ? "Playing..." : "Listen to pronunciation"}
+                          </Button>
                         </div>
                       </>
                     )}
