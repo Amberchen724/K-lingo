@@ -10,29 +10,42 @@ import { Link } from "wouter";
 import type { Flashcard } from "@shared/schema";
 
 type CardRating = "again" | "good" | "easy";
+type CardFilter = "all" | "sentence" | "vocab" | "grammar";
 
 export default function Review() {
   const [revealed, setRevealed] = useState(false);
   const [reviewedIds, setReviewedIds] = useState<Set<number>>(new Set());
+  const [filter, setFilter] = useState<CardFilter>("all");
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const prevDueRef = useRef<Flashcard[]>([]);
+  const prevDueIdsRef = useRef<string>("");
 
   const { data: dueCards = [], isLoading } = useQuery<Flashcard[]>({
     queryKey: ["/api/flashcards/due"],
   });
 
+  const dueIdsKey = dueCards.map(c => c.id).join(",");
   useEffect(() => {
-    if (dueCards !== prevDueRef.current) {
+    if (dueIdsKey !== prevDueIdsRef.current) {
       setReviewedIds(new Set());
-      prevDueRef.current = dueCards;
+      prevDueIdsRef.current = dueIdsKey;
     }
-  }, [dueCards]);
+  }, [dueIdsKey]);
 
   const pendingCards = useMemo(
-    () => dueCards.filter(c => !reviewedIds.has(c.id)),
-    [dueCards, reviewedIds]
+    () => dueCards.filter(c => !reviewedIds.has(c.id) && (filter === "all" || c.cardType === filter)),
+    [dueCards, reviewedIds, filter]
   );
+
+  const countByType = useMemo(() => {
+    const unreviewed = dueCards.filter(c => !reviewedIds.has(c.id));
+    return {
+      all: unreviewed.length,
+      sentence: unreviewed.filter(c => c.cardType === "sentence").length,
+      vocab: unreviewed.filter(c => c.cardType === "vocab").length,
+      grammar: unreviewed.filter(c => c.cardType === "grammar").length,
+    };
+  }, [dueCards, reviewedIds]);
 
   const reviewMutation = useMutation({
     mutationFn: async ({ id, rating }: { id: number; rating: CardRating }) => {
@@ -76,10 +89,17 @@ export default function Review() {
     return "bg-purple-100 text-purple-700";
   };
 
+  const tabs: { key: CardFilter; label: string; icon: React.ReactNode; activeClass: string; count: number }[] = [
+    { key: "all", label: "All", icon: null, activeClass: "bg-gray-900 text-white", count: countByType.all },
+    { key: "sentence", label: "Sentences", icon: <Languages className="w-3.5 h-3.5" />, activeClass: "bg-blue-600 text-white", count: countByType.sentence },
+    { key: "vocab", label: "Vocabulary", icon: <BookOpen className="w-3.5 h-3.5" />, activeClass: "bg-emerald-600 text-white", count: countByType.vocab },
+    { key: "grammar", label: "Grammar", icon: <Layers className="w-3.5 h-3.5" />, activeClass: "bg-purple-600 text-white", count: countByType.grammar },
+  ];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       <div className="max-w-2xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6">
           <Link href="/">
             <Button variant="ghost" className="rounded-xl gap-2" data-testid="link-back-home">
               <ArrowLeft className="w-4 h-4" />
@@ -90,15 +110,38 @@ export default function Review() {
             Flashcard Review
           </h1>
           <div className="text-sm text-muted-foreground" data-testid="text-cards-remaining">
-            {dueCards.length > 0 ? `${remaining} card${remaining !== 1 ? "s" : ""} left` : ""}
+            {remaining > 0 ? `${remaining} card${remaining !== 1 ? "s" : ""} left` : ""}
           </div>
+        </div>
+
+        <div className="flex gap-2 mb-6 p-1 bg-white/60 rounded-2xl shadow-sm" data-testid="filter-tabs">
+          {tabs.map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => { setFilter(tab.key); setRevealed(false); }}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                filter === tab.key
+                  ? tab.activeClass + " shadow-sm"
+                  : "text-muted-foreground hover:bg-gray-100"
+              }`}
+              data-testid={`filter-${tab.key}`}
+            >
+              {tab.icon}
+              <span>{tab.label}</span>
+              <span className={`ml-0.5 text-xs px-1.5 py-0.5 rounded-full ${
+                filter === tab.key ? "bg-white/20" : "bg-gray-200/80"
+              }`}>
+                {tab.count}
+              </span>
+            </button>
+          ))}
         </div>
 
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
           </div>
-        ) : dueCards.length === 0 ? (
+        ) : countByType.all === 0 ? (
           <Card className="border-0 rounded-3xl bg-white/80 shadow-lg">
             <CardContent className="flex flex-col items-center justify-center py-20 text-center">
               <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mb-4">
@@ -114,6 +157,20 @@ export default function Review() {
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
               </Link>
+            </CardContent>
+          </Card>
+        ) : remaining === 0 ? (
+          <Card className="border-0 rounded-3xl bg-white/80 shadow-lg">
+            <CardContent className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mb-4">
+                <Check className="w-8 h-8 text-emerald-600" />
+              </div>
+              <h2 className="text-xl font-semibold mb-2" data-testid="text-filter-done">
+                No {filter === "all" ? "" : filter} cards left!
+              </h2>
+              <p className="text-muted-foreground max-w-sm">
+                You've reviewed all {filter === "all" ? "" : cardTypeLabel(filter).toLowerCase()} cards. Try another category or come back later.
+              </p>
             </CardContent>
           </Card>
         ) : card ? (
