@@ -35,7 +35,16 @@ Preferred communication style: Simple, everyday language.
 ### API Routes (server/routes.ts)
 - `POST /api/analyze` — Checks `analysis_cache` table first (by SHA-256 hash of normalized sentence); returns cached result if found, otherwise calls OpenAI (gpt-4o-mini), stores result, then returns it
 - `POST /api/pronunciation-score` — Accepts base64 audio + sentence, transcribes via Whisper, scores pronunciation via GPT
+- `GET /api/flashcards/due` — Returns flashcards where nextReviewDate <= now
+- `GET /api/flashcards` — Returns all flashcards
+- `POST /api/flashcards/:id/review` — Accepts rating (again/good/easy), updates nextReviewDate (+1/3/7 days) and increments reviewCount
 - Folder and sentence CRUD operations via the storage layer
+
+### Flashcard System
+- Flashcards auto-generated when saving a sentence (no OpenAI calls)
+- Three card types: sentence recall (English→Korean), vocabulary (Korean→English), grammar (pattern→explanation)
+- Spaced repetition: Again=+1 day, Good=+3 days, Easy=+7 days
+- Review page at `/review` shows due cards one at a time with reveal+rate flow
 
 ### Analysis Caching
 - Sentence is normalized (trim + collapse whitespace) before hashing
@@ -51,6 +60,7 @@ Preferred communication style: Simple, everyday language.
   - `folders` — id, name, emoji (for organizing saved sentences)
   - `sentences` — id, korean text, pronunciation, words (JSONB), grammar (JSONB), folderId (FK), createdAt
   - `analysis_cache` — id, hash (unique), sentence, model_version, result (JSONB), createdAt
+  - `flashcards` — id, sentenceId (FK), cardType (sentence|vocab|grammar), frontText, backText, nextReviewDate, reviewCount, createdAt
   - `conversations` — id, title, createdAt (for chat feature)
   - `messages` — id, conversationId (FK), role, content, createdAt
 - **Migrations**: Managed via `drizzle-kit push` (schema push approach, not migration files)

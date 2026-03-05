@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { createHash } from "crypto";
 import { storage } from "./storage";
 import OpenAI from "openai";
-import type { SentenceAnalysis } from "@shared/schema";
+import type { SentenceAnalysis, InsertFlashcard } from "@shared/schema";
 import { registerAudioRoutes, ensureCompatibleFormat, speechToText } from "./replit_integrations/audio";
 import { registerChatRoutes } from "./replit_integrations/chat";
 
@@ -156,6 +156,49 @@ Break down ALL words and particles. Identify 2-4 key grammar points. Use simple,
         grammar,
         folderId: folderId || null,
       });
+
+      const existing = await storage.getFlashcardsBySentence(sentence.id);
+      if (existing.length === 0) {
+        const cards: InsertFlashcard[] = [];
+        cards.push({
+          sentenceId: sentence.id,
+          cardType: "sentence",
+          frontText: (translation && translation.trim()) ? translation : korean,
+          backText: korean,
+          nextReviewDate: new Date(),
+          reviewCount: 0,
+        });
+        if (words && Array.isArray(words)) {
+          for (const w of words) {
+            if (w.korean && w.meaning) {
+              cards.push({
+                sentenceId: sentence.id,
+                cardType: "vocab",
+                frontText: w.korean,
+                backText: w.meaning,
+                nextReviewDate: new Date(),
+                reviewCount: 0,
+              });
+            }
+          }
+        }
+        if (grammar && Array.isArray(grammar)) {
+          for (const g of grammar) {
+            if (g.point && g.explanation) {
+              cards.push({
+                sentenceId: sentence.id,
+                cardType: "grammar",
+                frontText: g.point,
+                backText: g.explanation,
+                nextReviewDate: new Date(),
+                reviewCount: 0,
+              });
+            }
+          }
+        }
+        await storage.createFlashcards(cards);
+      }
+
       res.status(201).json(sentence);
     } catch (error) {
       console.error("Error saving sentence:", error);
@@ -186,6 +229,50 @@ Break down ALL words and particles. Identify 2-4 key grammar points. Use simple,
     } catch (error) {
       console.error("Error deleting sentence:", error);
       res.status(500).json({ error: "Failed to delete sentence" });
+    }
+  });
+
+  app.get("/api/flashcards/due", async (_req, res) => {
+    try {
+      const cards = await storage.getDueFlashcards();
+      res.json(cards);
+    } catch (error) {
+      console.error("Error fetching due flashcards:", error);
+      res.status(500).json({ error: "Failed to fetch flashcards" });
+    }
+  });
+
+  app.get("/api/flashcards", async (_req, res) => {
+    try {
+      const cards = await storage.getAllFlashcards();
+      res.json(cards);
+    } catch (error) {
+      console.error("Error fetching flashcards:", error);
+      res.status(500).json({ error: "Failed to fetch flashcards" });
+    }
+  });
+
+  app.post("/api/flashcards/:id/review", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { rating } = req.body;
+      if (!rating || !["again", "good", "easy"].includes(rating)) {
+        return res.status(400).json({ error: "Rating must be 'again', 'good', or 'easy'" });
+      }
+      const now = new Date();
+      let nextDate: Date;
+      if (rating === "again") {
+        nextDate = new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000);
+      } else if (rating === "good") {
+        nextDate = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+      } else {
+        nextDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      }
+      const updated = await storage.reviewFlashcard(id, nextDate);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error reviewing flashcard:", error);
+      res.status(500).json({ error: "Failed to review flashcard" });
     }
   });
 

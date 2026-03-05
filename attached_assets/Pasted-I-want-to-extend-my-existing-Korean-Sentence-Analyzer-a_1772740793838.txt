@@ -1,0 +1,154 @@
+I want to extend my existing Korean Sentence Analyzer app with a Flashcard and Review system.
+
+Current app functionality:
+
+* User pastes a Korean sentence
+* Backend calls OpenAI API to analyze:
+
+  * pronunciation
+  * vocabulary
+  * grammar
+* The analysis result is saved in the database
+* If the same sentence is analyzed again, the system reuses the stored analysis instead of calling the API again (to save cost)
+
+New feature requirements:
+
+---
+
+FEATURE 1: FLASHCARD GENERATION
+
+When a sentence analysis is saved, automatically generate flashcards from the analysis result.
+
+Flashcard types:
+
+1. Sentence recall card
+   Front: English meaning of the sentence
+   Back: Original Korean sentence
+
+2. Vocabulary cards
+   Front: Korean vocabulary word
+   Back: English meaning
+
+3. Grammar cards
+   Front: Grammar pattern
+   Back: Short explanation
+
+These flashcards should be created ONLY once when the sentence is saved.
+
+IMPORTANT:
+Flashcards must NOT trigger any OpenAI API calls.
+
+---
+
+DATABASE STRUCTURE
+
+Add a new table:
+
+flashcards
+
+Fields:
+
+id
+sentence_id
+card_type (sentence | vocab | grammar)
+front_text
+back_text
+next_review_date
+review_count
+created_at
+
+---
+
+FLASHCARD CREATION LOGIC
+
+When a sentence is saved:
+
+1. Check if flashcards already exist for that sentence
+2. If not, create flashcards using the stored analysis result
+
+Example:
+
+Sentence:
+내일 도서관에 갈 거예요
+
+Flashcards generated:
+
+Sentence card
+Front: I will go to the library tomorrow
+Back: 내일 도서관에 갈 거예요
+
+Vocabulary cards
+Front: 도서관
+Back: library
+
+Grammar card
+Front: ~(으)ㄹ 거예요
+Back: future tense meaning "will / going to"
+
+---
+
+FEATURE 2: REVIEW PAGE
+
+Create a new page called:
+
+Review
+
+This page should:
+
+1. Load flashcards where
+   next_review_date <= today
+
+2. Display one card at a time
+
+3. Allow the user to:
+
+* reveal the answer
+* rate difficulty
+
+Buttons:
+
+Again
+Good
+Easy
+
+---
+
+REVIEW SCHEDULING LOGIC
+
+When user presses:
+
+Again
+→ next_review_date = tomorrow
+
+Good
+→ next_review_date = today + 3 days
+
+Easy
+→ next_review_date = today + 7 days
+
+Also increase review_count by 1.
+
+---
+
+UI BEHAVIOR
+
+Review page flow:
+
+Card front
+↓
+User clicks "Reveal"
+↓
+Show back side
+↓
+User selects Again / Good / Easy
+↓
+Load next card
+
+---
+
+IMPORTANT CONSTRAINTS
+
+* Flashcard review must NOT call OpenAI API
+* Only use stored data from the database
+* Keep implementation simple
+* Focus on minimal working review system

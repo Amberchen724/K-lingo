@@ -29,6 +29,17 @@ export const analysisCache = pgTable("analysis_cache", {
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
+export const flashcards = pgTable("flashcards", {
+  id: serial("id").primaryKey(),
+  sentenceId: integer("sentence_id").notNull().references(() => sentences.id, { onDelete: "cascade" }),
+  cardType: text("card_type").notNull().$type<"sentence" | "vocab" | "grammar">(),
+  frontText: text("front_text").notNull(),
+  backText: text("back_text").notNull(),
+  nextReviewDate: timestamp("next_review_date").default(sql`CURRENT_TIMESTAMP`).notNull(),
+  reviewCount: integer("review_count").default(0).notNull(),
+  createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+});
+
 export const conversations = pgTable("conversations", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
@@ -66,11 +77,14 @@ export interface SentenceAnalysis {
 
 export const insertFolderSchema = createInsertSchema(folders).omit({ id: true });
 export const insertSentenceSchema = createInsertSchema(sentences).omit({ id: true, createdAt: true });
+export const insertFlashcardSchema = createInsertSchema(flashcards).omit({ id: true, createdAt: true });
 
 export type Folder = typeof folders.$inferSelect;
 export type InsertFolder = z.infer<typeof insertFolderSchema>;
 export type Sentence = typeof sentences.$inferSelect;
 export type InsertSentence = z.infer<typeof insertSentenceSchema>;
+export type Flashcard = typeof flashcards.$inferSelect;
+export type InsertFlashcard = z.infer<typeof insertFlashcardSchema>;
 export type Conversation = typeof conversations.$inferSelect;
 export type Message = typeof messages.$inferSelect;
 export type AnalysisCache = typeof analysisCache.$inferSelect;

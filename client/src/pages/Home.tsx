@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
-import { Sparkles, Volume2, BookOpen, Layers, Save, FolderPlus, Languages, Loader2, Trash2, FolderOpen, Edit2, Plus, X, Check, MessageSquare, FolderInput } from "lucide-react";
+import { Sparkles, Volume2, BookOpen, Layers, Save, FolderPlus, Languages, Loader2, Trash2, FolderOpen, Edit2, Plus, X, Check, MessageSquare, FolderInput, GraduationCap } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
@@ -382,7 +382,13 @@ export default function Home() {
       <div className="max-w-4xl mx-auto space-y-8">
 
         <header className="text-center space-y-4 py-8 relative">
-          <div className="absolute top-8 right-0">
+          <div className="absolute top-8 right-0 flex gap-2">
+            <Link href="/review" data-testid="link-review">
+              <Button variant="outline" size="sm" className="gap-2 rounded-xl border-purple-300 text-purple-600 hover:bg-purple-50">
+                <GraduationCap size={15} />
+                Review
+              </Button>
+            </Link>
             <Link href="/chat" data-testid="link-ai-assistant">
               <Button variant="outline" size="sm" className="gap-2 rounded-xl border-primary/30 text-primary hover:bg-primary/10">
                 <MessageSquare size={15} />

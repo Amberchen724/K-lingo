@@ -1,6 +1,6 @@
 import { db } from "./db";
-import { folders, sentences, analysisCache, type Folder, type InsertFolder, type Sentence, type InsertSentence, type AnalysisCache, type SentenceAnalysis } from "@shared/schema";
-import { eq, desc } from "drizzle-orm";
+import { folders, sentences, analysisCache, flashcards, type Folder, type InsertFolder, type Sentence, type InsertSentence, type AnalysisCache, type SentenceAnalysis, type Flashcard, type InsertFlashcard } from "@shared/schema";
+import { eq, desc, lte, sql } from "drizzle-orm";
 
 export interface IStorage {
   getFolders(): Promise<Folder[]>;
@@ -14,6 +14,11 @@ export interface IStorage {
   getAnalysisCache(hash: string): Promise<AnalysisCache | null>;
   setAnalysisCache(hash: string, sentence: string, modelVersion: string, result: SentenceAnalysis): Promise<void>;
   updateSentenceFolderId(id: number, folderId: number): Promise<Sentence>;
+  getFlashcardsBySentence(sentenceId: number): Promise<Flashcard[]>;
+  createFlashcards(cards: InsertFlashcard[]): Promise<Flashcard[]>;
+  getDueFlashcards(): Promise<Flashcard[]>;
+  reviewFlashcard(id: number, nextReviewDate: Date): Promise<Flashcard>;
+  getAllFlashcards(): Promise<Flashcard[]>;
 }
 
 class DatabaseStorage implements IStorage {
@@ -67,6 +72,33 @@ class DatabaseStorage implements IStorage {
   async updateSentenceFolderId(id: number, folderId: number): Promise<Sentence> {
     const [updated] = await db.update(sentences).set({ folderId }).where(eq(sentences.id, id)).returning();
     return updated;
+  }
+
+  async getFlashcardsBySentence(sentenceId: number): Promise<Flashcard[]> {
+    return db.select().from(flashcards).where(eq(flashcards.sentenceId, sentenceId));
+  }
+
+  async createFlashcards(cards: InsertFlashcard[]): Promise<Flashcard[]> {
+    if (cards.length === 0) return [];
+    return db.insert(flashcards).values(cards).returning();
+  }
+
+  async getDueFlashcards(): Promise<Flashcard[]> {
+    const now = new Date();
+    return db.select().from(flashcards).where(lte(flashcards.nextReviewDate, now)).orderBy(flashcards.nextReviewDate);
+  }
+
+  async reviewFlashcard(id: number, nextReviewDate: Date): Promise<Flashcard> {
+    const [updated] = await db
+      .update(flashcards)
+      .set({ nextReviewDate, reviewCount: sql`${flashcards.reviewCount} + 1` })
+      .where(eq(flashcards.id, id))
+      .returning();
+    return updated;
+  }
+
+  async getAllFlashcards(): Promise<Flashcard[]> {
+    return db.select().from(flashcards).orderBy(desc(flashcards.createdAt));
   }
 }
 
