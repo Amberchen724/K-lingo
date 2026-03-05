@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -208,8 +208,15 @@ export default function Home() {
     });
   };
 
+  const currentAudio = useRef<HTMLAudioElement | null>(null);
+
   const handleSpeak = async (text: string) => {
     try {
+      if (currentAudio.current) {
+        currentAudio.current.pause();
+        currentAudio.current = null;
+      }
+
       const res = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -218,10 +225,20 @@ export default function Home() {
 
       if (!res.ok) throw new Error("Failed to fetch audio");
 
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audio.play();
+      const arrayBuffer = await res.arrayBuffer();
+      if (arrayBuffer.byteLength === 0) throw new Error("Empty audio response");
+
+      const bytes = new Uint8Array(arrayBuffer);
+      let binary = "";
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      const base64 = btoa(binary);
+      const dataUrl = `data:audio/mpeg;base64,${base64}`;
+
+      const audio = new Audio(dataUrl);
+      currentAudio.current = audio;
+      await audio.play();
     } catch (error) {
       console.error("TTS error:", error);
       toast({
@@ -704,6 +721,7 @@ export default function Home() {
               >
                 {renderAnalysis({
                   sentence: viewingSentence.korean,
+                  translation: viewingSentence.translation,
                   pronunciation: viewingSentence.pronunciation,
                   words: viewingSentence.words,
                   grammar: viewingSentence.grammar,
