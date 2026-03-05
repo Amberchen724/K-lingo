@@ -208,22 +208,14 @@ export default function Home() {
     });
   };
 
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const activeSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const activeAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const handleSpeak = async (text: string) => {
     try {
-      if (activeSourceRef.current) {
-        try { activeSourceRef.current.stop(); } catch {}
-        activeSourceRef.current = null;
-      }
-
-      if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      }
-      const ctx = audioContextRef.current;
-      if (ctx.state === "suspended") {
-        await ctx.resume();
+      if (activeAudioRef.current) {
+        activeAudioRef.current.pause();
+        activeAudioRef.current.removeAttribute("src");
+        activeAudioRef.current = null;
       }
 
       const res = await fetch("/api/tts", {
@@ -234,16 +226,21 @@ export default function Home() {
 
       if (!res.ok) throw new Error("Failed to fetch audio");
 
-      const arrayBuffer = await res.arrayBuffer();
-      if (arrayBuffer.byteLength === 0) throw new Error("Empty audio response");
+      const blob = await res.blob();
+      if (blob.size === 0) throw new Error("Empty audio response");
 
-      const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-      const source = ctx.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(ctx.destination);
-      activeSourceRef.current = source;
-      source.onended = () => { activeSourceRef.current = null; };
-      source.start(0);
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      activeAudioRef.current = audio;
+      audio.onended = () => {
+        URL.revokeObjectURL(url);
+        activeAudioRef.current = null;
+      };
+      audio.onerror = () => {
+        URL.revokeObjectURL(url);
+        activeAudioRef.current = null;
+      };
+      await audio.play();
     } catch (error) {
       console.error("TTS error:", error);
       toast({

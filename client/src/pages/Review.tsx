@@ -20,8 +20,7 @@ export default function Review() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const prevDueIdsRef = useRef<string>("");
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const activeSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const activeAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const { data: dueCards = [], isLoading } = useQuery<Flashcard[]>({
     queryKey: ["/api/flashcards/due"],
@@ -99,36 +98,38 @@ export default function Review() {
 
   const handleSpeak = async (text: string) => {
     if (isSpeaking) {
-      if (activeSourceRef.current) {
-        activeSourceRef.current.stop();
-        activeSourceRef.current = null;
+      if (activeAudioRef.current) {
+        activeAudioRef.current.pause();
+        activeAudioRef.current.removeAttribute("src");
+        activeAudioRef.current = null;
       }
       setIsSpeaking(false);
       return;
     }
     try {
       setIsSpeaking(true);
-      if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      }
-      const ctx = audioContextRef.current;
       const res = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
       });
       if (!res.ok) throw new Error("TTS failed");
-      const arrayBuffer = await res.arrayBuffer();
-      const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-      const source = ctx.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(ctx.destination);
-      activeSourceRef.current = source;
-      source.onended = () => {
+      const blob = await res.blob();
+      if (blob.size === 0) throw new Error("Empty audio response");
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      activeAudioRef.current = audio;
+      audio.onended = () => {
+        URL.revokeObjectURL(url);
         setIsSpeaking(false);
-        activeSourceRef.current = null;
+        activeAudioRef.current = null;
       };
-      source.start(0);
+      audio.onerror = () => {
+        URL.revokeObjectURL(url);
+        setIsSpeaking(false);
+        activeAudioRef.current = null;
+      };
+      await audio.play();
     } catch {
       setIsSpeaking(false);
       toast({ title: "Error", description: "Failed to play audio.", variant: "destructive" });
