@@ -208,13 +208,22 @@ export default function Home() {
     });
   };
 
-  const currentAudio = useRef<HTMLAudioElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const activeSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
   const handleSpeak = async (text: string) => {
     try {
-      if (currentAudio.current) {
-        currentAudio.current.pause();
-        currentAudio.current = null;
+      if (activeSourceRef.current) {
+        try { activeSourceRef.current.stop(); } catch {}
+        activeSourceRef.current = null;
+      }
+
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+      const ctx = audioContextRef.current;
+      if (ctx.state === "suspended") {
+        await ctx.resume();
       }
 
       const res = await fetch("/api/tts", {
@@ -228,17 +237,13 @@ export default function Home() {
       const arrayBuffer = await res.arrayBuffer();
       if (arrayBuffer.byteLength === 0) throw new Error("Empty audio response");
 
-      const bytes = new Uint8Array(arrayBuffer);
-      let binary = "";
-      for (let i = 0; i < bytes.length; i++) {
-        binary += String.fromCharCode(bytes[i]);
-      }
-      const base64 = btoa(binary);
-      const dataUrl = `data:audio/mpeg;base64,${base64}`;
-
-      const audio = new Audio(dataUrl);
-      currentAudio.current = audio;
-      await audio.play();
+      const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+      const source = ctx.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(ctx.destination);
+      activeSourceRef.current = source;
+      source.onended = () => { activeSourceRef.current = null; };
+      source.start(0);
     } catch (error) {
       console.error("TTS error:", error);
       toast({
