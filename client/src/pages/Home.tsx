@@ -16,9 +16,12 @@ import PronunciationRecorder from "@/components/PronunciationRecorder";
 
 interface WordEntry {
   korean: string;
+  base_form?: string;
   pronunciation: string;
   meaning: string;
   type: string;
+  role_in_sentence?: string;
+  other_forms?: string[];
 }
 
 interface GrammarEntry {
@@ -326,17 +329,43 @@ export default function Home() {
             <CardContent>
               <div className="grid gap-3">
                 {data.words.map((word, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-4 bg-white/50 rounded-2xl border border-white/20 hover:bg-white/80 transition-colors" data-testid={`word-entry-${idx}`}>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="text-lg font-bold text-foreground">{word.korean}</p>
-                        <p className="text-sm text-muted-foreground italic">({word.pronunciation})</p>
+                  <div key={idx} className="p-4 bg-white/50 rounded-2xl border border-white/20 hover:bg-white/80 transition-colors space-y-2" data-testid={`word-entry-${idx}`}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-lg font-bold text-foreground">{word.korean}</p>
+                          <p className="text-sm text-muted-foreground italic">({word.pronunciation})</p>
+                        </div>
+                        <p className="text-muted-foreground">{word.meaning}</p>
                       </div>
-                      <p className="text-muted-foreground">{word.meaning}</p>
+                      <Badge variant="secondary" className="bg-secondary/50 text-secondary-foreground rounded-lg px-3 py-1 shrink-0">
+                        {word.type}
+                      </Badge>
                     </div>
-                    <Badge variant="secondary" className="bg-secondary/50 text-secondary-foreground rounded-lg px-3 py-1">
-                      {word.type}
-                    </Badge>
+                    {(word.base_form || word.role_in_sentence || (word.other_forms && word.other_forms.length > 0)) && (
+                      <div className="pt-2 border-t border-border/30 space-y-1.5">
+                        {word.base_form && word.base_form !== word.korean && (
+                          <p className="text-sm text-muted-foreground" data-testid={`word-base-${idx}`}>
+                            <span className="font-medium text-foreground/70">Base form:</span> {word.base_form}
+                          </p>
+                        )}
+                        {word.role_in_sentence && (
+                          <p className="text-sm text-muted-foreground" data-testid={`word-role-${idx}`}>
+                            <span className="font-medium text-foreground/70">Role:</span> {word.role_in_sentence}
+                          </p>
+                        )}
+                        {word.other_forms && word.other_forms.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 items-center" data-testid={`word-forms-${idx}`}>
+                            <span className="text-sm font-medium text-foreground/70">Forms:</span>
+                            {word.other_forms.map((form, fi) => (
+                              <Badge key={fi} variant="outline" className="text-xs rounded-lg font-normal">
+                                {form}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

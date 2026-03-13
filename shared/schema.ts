@@ -54,12 +54,15 @@ export const messages = pgTable("messages", {
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
-export interface WordEntry {
+export type WordEntry = {
   korean: string;
+  base_form?: string;
   pronunciation: string;
   meaning: string;
   type: string;
-}
+  role_in_sentence?: string;
+  other_forms?: string[];
+};
 
 export interface GrammarEntry {
   point: string;

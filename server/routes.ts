@@ -7,7 +7,7 @@ import type { SentenceAnalysis, InsertFlashcard } from "@shared/schema";
 import { registerAudioRoutes, ensureCompatibleFormat, speechToText } from "./replit_integrations/audio";
 import { registerChatRoutes } from "./replit_integrations/chat";
 
-const MODEL_VERSION = "gpt-4o-mini-v1";
+const MODEL_VERSION = "gpt-4o-mini-v2";
 
 function normalizeSentence(raw: string): string {
   return raw.trim().replace(/\s+/g, " ");
@@ -40,7 +40,7 @@ export async function registerRoutes(
       const hash = hashSentence(normalized);
 
       const cached = await storage.getAnalysisCache(hash);
-      if (cached) {
+      if (cached && cached.modelVersion === MODEL_VERSION) {
         return res.json(cached.result);
       }
 
@@ -49,19 +49,50 @@ export async function registerRoutes(
         messages: [
           {
             role: "system",
-            content: `You are a Korean language expert. Analyze the given Korean sentence and return a JSON object with exactly this structure:
+            content: `You are an expert Korean language teacher helping a beginner learner understand Korean sentences.
+
+Analyze the given Korean sentence and return a JSON object with exactly the following structure.
+
+Important guidelines:
+1. Break the sentence into meaningful vocabulary or grammatical units useful for learners.
+2. If a verb or adjective appears in a conjugated form, identify its base dictionary form in the explanation.
+3. Identify important particles and explain their role when they affect sentence meaning.
+4. Focus on vocabulary that learners should study. Avoid listing obvious particles unless they are important for understanding the grammar.
+5. Grammar explanations should be simple and beginner-friendly.
+6. Highlight 2–4 key grammar patterns used in the sentence.
+7. Use clear and natural English explanations.
+8. The pronunciation should be a full romanization of the sentence.
+
+Return JSON in this exact format:
 {
   "sentence": "<the original Korean sentence>",
   "translation": "<natural English translation>",
   "pronunciation": "<full romanization of the sentence>",
   "words": [
-    { "korean": "<Korean word or morpheme>", "pronunciation": "<romanization>", "meaning": "<English meaning>", "type": "<part of speech: Noun, Verb, Adjective, Adverb, Particle, Greeting, Pronoun, Conjunction, etc.>" }
+    {  "korean": "<the form that appears in the sentence>",
+      "base_form": "<dictionary form if applicable, otherwise same as korean>",
+      "pronunciation": "<romanization>",
+      "meaning": "<English meaning>",
+      "type": "<part of speech such as Noun, Verb, Adjective, Particle, Expression>",
+      "role_in_sentence": "<brief explanation of how this form functions in this sentence>",
+      "other_forms": ["<common related forms the learner may encounter>"]}
   ],
   "grammar": [
     { "point": "<grammar pattern>", "explanation": "<clear explanation for beginners>", "example": "<example from the sentence>" }
   ]
 }
-Break down ALL words and particles. Identify 2-4 key grammar points. Use simple, beginner-friendly explanations. Return ONLY valid JSON, no markdown.`
+Important rules:
+1. Break the sentence into meaningful vocabulary or grammatical units useful for learners.
+2. If a verb or adjective appears in a conjugated form, always include its dictionary base form.
+3. For each important vocabulary item, explain its role in this sentence.
+4. Include 3-5 common related forms in "other_forms" for verbs and adjectives when helpful.
+5. For nouns and particles, "other_forms" can be an empty array if not applicable.
+6. Focus on vocabulary that learners should study. Avoid listing trivial particles unless important for understanding the sentence.
+7. Highlight 2-4 key grammar patterns used in the sentence.
+8. Use simple, beginner-friendly English.
+
+Return ONLY valid JSON.
+Do not include markdown, comments, or any explanation outside the JSON.`
           },
           {
             role: "user",
