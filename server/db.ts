@@ -1,3 +1,5 @@
+import { createRequire } from "module";
+try { createRequire(import.meta.url)("dotenv").config(); } catch {}
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "@shared/schema";
