@@ -1,0 +1,42 @@
+declare -x CONDA_DEFAULT_ENV="base"
+declare -x CONDA_EXE="/Users/amber/anaconda3/bin/conda"
+declare -x CONDA_PREFIX="/Users/amber/anaconda3"
+declare -x CONDA_PROMPT_MODIFIER="(base) "
+declare -x CONDA_SHLVL="1"
+declare -x CPL_ZIP_ENCODING="UTF-8"
+declare -x GDAL_DATA="/Users/amber/anaconda3/share/gdal"
+declare -x HOME="/Users/amber"
+declare -x LANG="en_US.UTF-8"
+declare -x LOGNAME="amber"
+declare -x LaunchInstanceID="684265A5-8F1C-42BA-B050-807FF328906F"
+declare -x OLDPWD="/Users/amber/Documents/Tech Projects/Amber's Note/claude learn/mixwise/mixwise"
+declare -x PATH="/Users/amber/anaconda3/bin:/Users/amber/anaconda3/condabin:/anaconda3/bin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin"
+declare -x PROJ_LIB="/Users/amber/anaconda3/share/proj"
+declare -x PWD="/Users/amber/Documents/Tech Projects/Amber's Note/claude learn/mixwise/mixwise/K-lingo"
+declare -x PYSPARK_DRIVER_PYTHON="jupyter"
+declare -x PYSPARK_DRIVER_PYTHON_OPTS="notebook"
+declare -x PYSPARK_PYTHON="python3"
+declare -x PYTHONPATH=":/Users/amber/anaconda3/pkgs/pyspark-2.4.0-py37_0/lib/python3.7/site-packages/pyspark/python"
+declare -x SECURITYSESSIONID="186a1"
+declare -x SHELL="/bin/bash"
+declare -x SHLVL="1"
+declare -x SPARK_HOME="/Users/amber/anaconda3/pkgs/pyspark-2.4.0-py37_0/lib/python3.7/site-packages/pyspark"
+declare -x SSH_AUTH_SOCK="/private/tmp/com.apple.launchd.YWwLohwsvG/Listeners"
+declare -x TERM="xterm-256color"
+declare -x TERM_PROGRAM="Apple_Terminal"
+declare -x TERM_PROGRAM_VERSION="455.1"
+declare -x TERM_SESSION_ID="CDB16260-126E-4BE1-8E38-EE95BC2016ED"
+declare -x TMPDIR="/var/folders/gn/bksnbdwx2dq5wfh7md7q7x9r0000gn/T/"
+declare -x USER="amber"
+declare -x XPC_FLAGS="0x0"
+declare -x XPC_SERVICE_NAME="0"
+declare -x _CE_CONDA=""
+declare -x _CE_M=""
+declare -x __CFBundleIdentifier="com.apple.Terminal"
+
+> rest-express@1.0.0 db:push
+> drizzle-kit push
+
+No config path provided, using default 'drizzle.config.ts'
+Reading config file '/Users/amber/Documents/Tech Projects/Amber's Note/claude learn/mixwise/mixwise/K-lingo/drizzle.config.ts'
+DATABASE_URL, ensure the database is provisioned
