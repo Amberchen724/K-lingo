@@ -1,3 +1,5 @@
+import { createRequire } from "module";
+try { createRequire(import.meta.url)("dotenv").config(); } catch {}
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
